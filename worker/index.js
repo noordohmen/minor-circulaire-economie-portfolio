@@ -1,4 +1,5 @@
 import { HTML } from '../web/page.js';
+const ASSETS = /*ASSETS*/ {};
 export const initialData = {
  about: {text:'Ik ben Noor Dohmen, vierdejaarsstudent Bedrijfskunde aan de HAN in Nijmegen. Tijdens de minor Circulaire Economie onderzoek ik hoe organisaties duurzamer en toekomstbestendiger kunnen werken.\n\nMijn interesses liggen bij procesverbetering, verandermanagement, kwaliteitsmanagement en innovatie. In dit portfolio laat ik zien aan welke projecten ik werk, hoe ik ze aanpak en wat ik daarvan leer.',photo:''},
  projects:[
@@ -16,21 +17,35 @@ export const initialData = {
  {id:'comfortzone',title:'Vaker uit mijn comfortzone stappen',description:'Ik wil mezelf uitdagen om dingen te doen die ik anders sneller vermijd en samenwerken met verschillende mensen.',evidence:'Ik neem deel aan kortcyclische opdrachten, werk met andere mensen en oefen met kritische vragen stellen tijdens interviews.',reflection:'',projects:['talis','roelofs']}
  ]
 };
+
+// Apply the requested content corrections once; future editor saves retain the revision.
+export function applyFeedback(data){
+ if((data.feedbackRevision||0)>=1)return data;
+ const green=data.projects.find(p=>p.id==='greenstories');
+ if(green){green.end='2026-11';green.duration=green.duration==='September – oktober 2026'?'September – november 2026':green.duration;green.cover=green.cover||'/assets/greenstories-doosje.jpg';if(!green.files.some(f=>f.id==='greenstories-box'))green.files.push({id:'greenstories-box',name:'Greenstories — ontwerp doosje.jpg',url:'/assets/greenstories-doosje.jpg',type:'image/jpeg',size:180294});}
+ const ocean=data.projects.find(p=>p.id==='oceaanwebsite');
+ if(ocean){ocean.link='https://noordohmen.github.io/duik-in-de-diepte/';ocean.tags=Array.from(new Set(['AI',...ocean.tags]));ocean.summary='Mijn allereerste AI-project en de eerste website die ik ooit heb gemaakt: een oceanenwebsite voor kinderen. Een leerzaam eerste experiment met AI en webdesign.';ocean.result='De website Duik in de diepte staat online. Kinderen kunnen hier de oceanen ontdekken.';ocean.reflection=[ocean.reflection,'Dit was mijn eerste AI-project en mijn eerste eigen website. Ik vond het erg leerzaam om voor het eerst zelf een website te maken met AI.'].filter(Boolean).join('\n\n');}
+ const poes=data.projects.find(p=>p.id==='poes');
+ if(poes){poes.link='https://dg-poes-modern.noordohmen.chatgpt.site/';poes.originalLink='https://dgpoes.nl/';poes.duration='Ongeveer 4 dagen';poes.summary='Een vernieuwde website voor damesgenootschap Poes, gemaakt met AI. Vanuit de bestaande website heb ik gewerkt aan een nieuwe, geoptimaliseerde versie.';poes.approach='Ik heb in totaal ongeveer vier dagen gewerkt aan het optimaliseren van de website: alle informatie goed neerzetten, foto’s uploaden, linkjes toevoegen en de verschillende onderdelen verder uitwerken.';poes.result='De huidige versie van de vernieuwde website staat online. Via de links hieronder kun je het resultaat en de oorspronkelijke website bekijken.';}
+ data.feedbackRevision=1;return data;
+}
+
 const headers={'X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','X-Robots-Tag':'noindex, nofollow','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'self' https://chatgpt.com"};
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...headers,'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',...extra}});
 const admin=(req,env)=>!!env.ADMIN_EMAIL && !!req.headers.get('oai-authenticated-user-id') && req.headers.get('oai-authenticated-user-email')?.toLowerCase()===env.ADMIN_EMAIL.toLowerCase();
-const safeURL=x=>typeof x==='string'&&(x===''||/^https:\/\/[^\s]+$/.test(x)||/^\/files\/[a-zA-Z0-9-]+$/.test(x));
+const safeURL=x=>typeof x==='string'&&(x===''||/^https:\/\/[^\s]+$/.test(x)||/^\/files\/[a-zA-Z0-9-]+$/.test(x)||x==='/assets/greenstories-doosje.jpg');
 export function validData(d){
  if(!d||!Array.isArray(d.projects)||!Array.isArray(d.goals)||d.projects.length>100||d.goals.length>100||!d.about||typeof d.about.text!=='string'||!safeURL(d.about.photo)) return false;
  const ids=new Set();
- for(const p of d.projects){if(!p||typeof p.id!=='string'||!/^[a-z0-9-]{1,80}$/.test(p.id)||ids.has(p.id)||typeof p.title!=='string'||!p.title.trim()||!Array.isArray(p.tags)||!p.tags.every(t=>typeof t==='string'&&t.length<100)||!Array.isArray(p.files)||!Array.isArray(p.updates)||!safeURL(p.cover)||!safeURL(p.link||'')||!['Afgerond','Bezig','Nog te starten'].includes(p.status))return false;ids.add(p.id);for(const k of ['summary','subtitle','approach','result','reflection','team','duration','start','end','art'])if(typeof p[k]!=='string'||p[k].length>30000)return false;for(const f of p.files)if(!f||typeof f.id!=='string'||!/^\/files\/[a-zA-Z0-9-]+$/.test(f.url)||typeof f.name!=='string'||typeof f.type!=='string')return false;for(const u of p.updates)if(!u||typeof u.date!=='string'||typeof u.title!=='string'||typeof u.text!=='string')return false;}
+ for(const p of d.projects){if(!p||typeof p.id!=='string'||!/^[a-z0-9-]{1,80}$/.test(p.id)||ids.has(p.id)||typeof p.title!=='string'||!p.title.trim()||!Array.isArray(p.tags)||!p.tags.every(t=>typeof t==='string'&&t.length<100)||!Array.isArray(p.files)||!Array.isArray(p.updates)||!safeURL(p.cover)||!safeURL(p.link||'')||!safeURL(p.originalLink||'')||!['Afgerond','Bezig','Nog te starten'].includes(p.status))return false;ids.add(p.id);for(const k of ['summary','subtitle','approach','result','reflection','team','duration','start','end','art'])if(typeof p[k]!=='string'||p[k].length>30000)return false;for(const f of p.files)if(!f||typeof f.id!=='string'||(!/^\/files\/[a-zA-Z0-9-]+$/.test(f.url)&&f.url!=='/assets/greenstories-doosje.jpg')||typeof f.name!=='string'||typeof f.type!=='string')return false;for(const u of p.updates)if(!u||typeof u.date!=='string'||typeof u.title!=='string'||typeof u.text!=='string')return false;}
  const goals=new Set();for(const g of d.goals){if(!g||typeof g.id!=='string'||goals.has(g.id)||!Array.isArray(g.projects)||!g.projects.every(id=>ids.has(id)))return false;goals.add(g.id);for(const k of ['title','description','evidence','reflection'])if(typeof g[k]!=='string'||g[k].length>30000)return false;}
  return true;
 }
-async function readData(env){const obj=await env.BUCKET.get('portfolio/content.json');return obj?{data:await obj.json(),etag:obj.etag}:{data:structuredClone(initialData),etag:'initial'};}
+async function readData(env){const obj=await env.BUCKET.get('portfolio/content.json');return obj?{data:applyFeedback(await obj.json()),etag:obj.etag}:{data:applyFeedback(structuredClone(initialData)),etag:'initial'};}
 const allowedTypes=new Set(['image/jpeg','image/png','image/webp','image/gif','application/pdf','text/plain','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.presentationml.presentation','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
 export default {async fetch(req,env){try{
  const url=new URL(req.url);const path=url.pathname;const isAdmin=admin(req,env);
+ if(path==='/assets/greenstories-doosje.jpg'&&['GET','HEAD'].includes(req.method)){const asset=ASSETS['greenstories-doosje'];return new Response(req.method==='HEAD'?null:Uint8Array.from(atob(asset.data),c=>c.charCodeAt(0)),{headers:{...headers,'Content-Type':asset.type,'Cache-Control':'public, max-age=86400','Content-Disposition':(url.searchParams.has('download')?'attachment':'inline')+'; filename=greenstories-doosje.jpg'}});}
  if(path==='/api/session')return json({admin:isAdmin,signedIn:!!req.headers.get('oai-authenticated-user-id')});
  if(path.startsWith('/api/')&&!['GET','HEAD'].includes(req.method)){
   if(!isAdmin)return json({error:'Alleen Noor kan dit portfolio aanpassen.'},403);
