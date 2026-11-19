@@ -1,0 +1,1 @@
+{"name":"portfolio-noor-dohmen","private":true,"type":"module","scripts":{"build":"node scripts/build.mjs","test":"node --test tests/server.test.mjs","dev":"node scripts/dev.mjs"}}
