@@ -30,22 +30,34 @@ export function applyFeedback(data){
  data.feedbackRevision=1;return data;
 }
 
+
+export function applyMedia(data){
+ if((data.mediaRevision||0)>=1)return data;
+ const add=(p,key,name)=>{if(!p.files.some(f=>f.id===key)){const a=ASSETS[key];p.files.push({id:key,name:name||a.name,url:'/assets/'+key+(a.type==='application/pdf'?'.pdf':'.jpg'),type:a.type,size:a.size});}};
+ const ocean=data.projects.find(p=>p.id==='oceaanwebsite');if(ocean){ocean.cover=ocean.cover||'/assets/oceaan-preview.jpg';add(ocean,'oceaan-preview');}
+ const poes=data.projects.find(p=>p.id==='poes');if(poes){poes.cover=poes.cover||'/assets/poes-preview.jpg';add(poes,'poes-preview');}
+ const green=data.projects.find(p=>p.id==='greenstories');if(green){add(green,'greenstories-kaartjes-preview');add(green,'greenstories-kaartjes');add(green,'greenstories-handleiding');}
+ data.mediaRevision=1;return data;
+}
+const isAssetPath=x=>typeof x==='string'&&/^\/assets\/[a-z0-9-]+\.(jpg|pdf)$/.test(x)&&!!ASSETS[x.slice(8).replace(/\.(jpg|pdf)$/,'')];
+
 const headers={'X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','X-Robots-Tag':'noindex, nofollow','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'self' https://chatgpt.com"};
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...headers,'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',...extra}});
 const admin=(req,env)=>!!env.ADMIN_EMAIL && !!req.headers.get('oai-authenticated-user-id') && req.headers.get('oai-authenticated-user-email')?.toLowerCase()===env.ADMIN_EMAIL.toLowerCase();
-const safeURL=x=>typeof x==='string'&&(x===''||/^https:\/\/[^\s]+$/.test(x)||/^\/files\/[a-zA-Z0-9-]+$/.test(x)||x==='/assets/greenstories-doosje.jpg');
+const safeURL=x=>typeof x==='string'&&(x===''||/^https:\/\/[^\s]+$/.test(x)||/^\/files\/[a-zA-Z0-9-]+$/.test(x)||isAssetPath(x));
 export function validData(d){
  if(!d||!Array.isArray(d.projects)||!Array.isArray(d.goals)||d.projects.length>100||d.goals.length>100||!d.about||typeof d.about.text!=='string'||!safeURL(d.about.photo)) return false;
  const ids=new Set();
- for(const p of d.projects){if(!p||typeof p.id!=='string'||!/^[a-z0-9-]{1,80}$/.test(p.id)||ids.has(p.id)||typeof p.title!=='string'||!p.title.trim()||!Array.isArray(p.tags)||!p.tags.every(t=>typeof t==='string'&&t.length<100)||!Array.isArray(p.files)||!Array.isArray(p.updates)||!safeURL(p.cover)||!safeURL(p.link||'')||!safeURL(p.originalLink||'')||!['Afgerond','Bezig','Nog te starten'].includes(p.status))return false;ids.add(p.id);for(const k of ['summary','subtitle','approach','result','reflection','team','duration','start','end','art'])if(typeof p[k]!=='string'||p[k].length>30000)return false;for(const f of p.files)if(!f||typeof f.id!=='string'||(!/^\/files\/[a-zA-Z0-9-]+$/.test(f.url)&&f.url!=='/assets/greenstories-doosje.jpg')||typeof f.name!=='string'||typeof f.type!=='string')return false;for(const u of p.updates)if(!u||typeof u.date!=='string'||typeof u.title!=='string'||typeof u.text!=='string')return false;}
+ for(const p of d.projects){if(!p||typeof p.id!=='string'||!/^[a-z0-9-]{1,80}$/.test(p.id)||ids.has(p.id)||typeof p.title!=='string'||!p.title.trim()||!Array.isArray(p.tags)||!p.tags.every(t=>typeof t==='string'&&t.length<100)||!Array.isArray(p.files)||!Array.isArray(p.updates)||!safeURL(p.cover)||!safeURL(p.link||'')||!safeURL(p.originalLink||'')||!['Afgerond','Bezig','Nog te starten'].includes(p.status))return false;ids.add(p.id);for(const k of ['summary','subtitle','approach','result','reflection','team','duration','start','end','art'])if(typeof p[k]!=='string'||p[k].length>30000)return false;for(const f of p.files)if(!f||typeof f.id!=='string'||(!/^\/files\/[a-zA-Z0-9-]+$/.test(f.url)&&!isAssetPath(f.url))||typeof f.name!=='string'||typeof f.type!=='string')return false;for(const u of p.updates)if(!u||typeof u.date!=='string'||typeof u.title!=='string'||typeof u.text!=='string')return false;}
  const goals=new Set();for(const g of d.goals){if(!g||typeof g.id!=='string'||goals.has(g.id)||!Array.isArray(g.projects)||!g.projects.every(id=>ids.has(id)))return false;goals.add(g.id);for(const k of ['title','description','evidence','reflection'])if(typeof g[k]!=='string'||g[k].length>30000)return false;}
  return true;
 }
-async function readData(env){const obj=await env.BUCKET.get('portfolio/content.json');return obj?{data:applyFeedback(await obj.json()),etag:obj.etag}:{data:applyFeedback(structuredClone(initialData)),etag:'initial'};}
+async function readData(env){const obj=await env.BUCKET.get('portfolio/content.json');return obj?{data:applyMedia(applyFeedback(await obj.json())),etag:obj.etag}:{data:applyMedia(applyFeedback(structuredClone(initialData))),etag:'initial'};}
 const allowedTypes=new Set(['image/jpeg','image/png','image/webp','image/gif','application/pdf','text/plain','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.presentationml.presentation','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
 export default {async fetch(req,env){try{
  const url=new URL(req.url);const path=url.pathname;const isAdmin=admin(req,env);
- if(path==='/assets/greenstories-doosje.jpg'&&['GET','HEAD'].includes(req.method)){const asset=ASSETS['greenstories-doosje'];return new Response(req.method==='HEAD'?null:Uint8Array.from(atob(asset.data),c=>c.charCodeAt(0)),{headers:{...headers,'Content-Type':asset.type,'Cache-Control':'public, max-age=86400','Content-Disposition':(url.searchParams.has('download')?'attachment':'inline')+'; filename=greenstories-doosje.jpg'}});}
+ if(isAssetPath(path)&&['GET','HEAD'].includes(req.method)){const key=path.slice(8).replace(/\.(jpg|pdf)$/,'');const asset=ASSETS[key];return new Response(req.method==='HEAD'?null:Uint8Array.from(atob(asset.data),c=>c.charCodeAt(0)),{headers:{...headers,'Content-Type':asset.type,'Cache-Control':'public, max-age=3600','Content-Disposition':(url.searchParams.has('download')?'attachment':'inline')+"; filename*=UTF-8''"+encodeURIComponent(asset.name||key+'.jpg')}});}
+
  if(path==='/api/session')return json({admin:isAdmin,signedIn:!!req.headers.get('oai-authenticated-user-id')});
  if(path.startsWith('/api/')&&!['GET','HEAD'].includes(req.method)){
   if(!isAdmin)return json({error:'Alleen Noor kan dit portfolio aanpassen.'},403);
