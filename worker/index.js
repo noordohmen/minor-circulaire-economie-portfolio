@@ -32,12 +32,12 @@ export function applyFeedback(data){
 
 
 export function applyMedia(data){
- if((data.mediaRevision||0)>=1)return data;
+ if((data.mediaRevision||0)>=2)return data;
  const add=(p,key,name)=>{if(!p.files.some(f=>f.id===key)){const a=ASSETS[key];p.files.push({id:key,name:name||a.name,url:'/assets/'+key+(a.type==='application/pdf'?'.pdf':'.jpg'),type:a.type,size:a.size});}};
- const ocean=data.projects.find(p=>p.id==='oceaanwebsite');if(ocean){ocean.cover=ocean.cover||'/assets/oceaan-preview.jpg';add(ocean,'oceaan-preview');}
- const poes=data.projects.find(p=>p.id==='poes');if(poes){poes.cover=poes.cover||'/assets/poes-preview.jpg';add(poes,'poes-preview');}
- const green=data.projects.find(p=>p.id==='greenstories');if(green){add(green,'greenstories-kaartjes-preview');add(green,'greenstories-kaartjes');add(green,'greenstories-handleiding');}
- data.mediaRevision=1;return data;
+ const ocean=data.projects.find(p=>p.id==='oceaanwebsite');if(ocean){ocean.approach=ocean.approach||'Voor dit eerste AI-project maakte ik een website voor kinderen over de oceanen. De website bevat een interactieve kaart met onderwerpen en quizzen. Zo kon ik voor het eerst ervaren hoe ik met AI een eigen website kan maken.';ocean.cover=ocean.cover||'/assets/oceaan-preview.jpg';add(ocean,'oceaan-preview');}
+ const poes=data.projects.find(p=>p.id==='poes');if(poes){poes.result=poes.result.replace('Via de links hieronder','Via de knoppen bovenaan');poes.cover=poes.cover||'/assets/poes-preview.jpg';add(poes,'poes-preview');}
+ const green=data.projects.find(p=>p.id==='greenstories');if(green){green.result=green.result||'Een Greenstories-spel met duurzame raadsels, een ontworpen doosje, een proefprint van de kaartjes en een handleiding. De beschikbare bestanden zijn hieronder te bekijken en te downloaden.';add(green,'greenstories-kaartjes-preview');add(green,'greenstories-kaartjes');add(green,'greenstories-handleiding');}
+ data.mediaRevision=2;return data;
 }
 const isAssetPath=x=>typeof x==='string'&&/^\/assets\/[a-z0-9-]+\.(jpg|pdf)$/.test(x)&&!!ASSETS[x.slice(8).replace(/\.(jpg|pdf)$/,'')];
 
