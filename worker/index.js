@@ -18,7 +18,7 @@ export const initialData = {
 };
 const headers={'X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','X-Robots-Tag':'noindex, nofollow','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'self' https://chatgpt.com"};
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...headers,'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',...extra}});
-const admin=(req,env)=>!!env.ADMIN_EMAIL && req.headers.get('oai-authenticated-user-email')?.toLowerCase()===env.ADMIN_EMAIL.toLowerCase();
+const admin=(req,env)=>!!env.ADMIN_EMAIL && !!req.headers.get('oai-authenticated-user-id') && req.headers.get('oai-authenticated-user-email')?.toLowerCase()===env.ADMIN_EMAIL.toLowerCase();
 const safeURL=x=>typeof x==='string'&&(x===''||/^https:\/\/[^\s]+$/.test(x)||/^\/files\/[a-zA-Z0-9-]+$/.test(x));
 export function validData(d){
  if(!d||!Array.isArray(d.projects)||!Array.isArray(d.goals)||d.projects.length>100||d.goals.length>100||!d.about||typeof d.about.text!=='string'||!safeURL(d.about.photo)) return false;
