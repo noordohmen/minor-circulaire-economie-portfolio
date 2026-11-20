@@ -41,19 +41,19 @@ export function applyMedia(data){
 }
 const isAssetPath=x=>typeof x==='string'&&/^\/assets\/[a-z0-9-]+\.(jpg|pdf)$/.test(x)&&!!ASSETS[x.slice(8).replace(/\.(jpg|pdf)$/,'')];
 
-const headers={'X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','X-Robots-Tag':'noindex, nofollow','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'self' https://chatgpt.com"};
+const headers={'X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','X-Robots-Tag':'noindex, nofollow','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; frame-src 'self' https://dg-poes-modern.noordohmen.chatgpt.site https://noordohmen.github.io https://lotsofluck.nl; base-uri 'none'; form-action 'self'; frame-ancestors 'self' https://chatgpt.com"};
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{...headers,'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',...extra}});
 const admin=(req,env)=>!!env.ADMIN_EMAIL && !!req.headers.get('oai-authenticated-user-id') && req.headers.get('oai-authenticated-user-email')?.toLowerCase()===env.ADMIN_EMAIL.toLowerCase();
 const safeURL=x=>typeof x==='string'&&(x===''||/^https:\/\/[^\s]+$/.test(x)||/^\/files\/[a-zA-Z0-9-]+$/.test(x)||isAssetPath(x));
 export function validData(d){
  if(!d||!Array.isArray(d.projects)||!Array.isArray(d.goals)||d.projects.length>100||d.goals.length>100||!d.about||typeof d.about.text!=='string'||!safeURL(d.about.photo)) return false;
  const ids=new Set();
- for(const p of d.projects){if(!p||typeof p.id!=='string'||!/^[a-z0-9-]{1,80}$/.test(p.id)||ids.has(p.id)||typeof p.title!=='string'||!p.title.trim()||!Array.isArray(p.tags)||!p.tags.every(t=>typeof t==='string'&&t.length<100)||!Array.isArray(p.files)||!Array.isArray(p.updates)||!safeURL(p.cover)||!safeURL(p.link||'')||!safeURL(p.originalLink||'')||!['Afgerond','Bezig','Nog te starten'].includes(p.status))return false;ids.add(p.id);for(const k of ['summary','subtitle','approach','result','reflection','team','duration','start','end','art'])if(typeof p[k]!=='string'||p[k].length>30000)return false;for(const f of p.files)if(!f||typeof f.id!=='string'||(!/^\/files\/[a-zA-Z0-9-]+$/.test(f.url)&&!isAssetPath(f.url))||typeof f.name!=='string'||typeof f.type!=='string')return false;for(const u of p.updates)if(!u||typeof u.date!=='string'||typeof u.title!=='string'||typeof u.text!=='string')return false;}
+ for(const p of d.projects){if(!p||typeof p.id!=='string'||!/^[a-z0-9-]{1,80}$/.test(p.id)||ids.has(p.id)||typeof p.title!=='string'||!p.title.trim()||!Array.isArray(p.tags)||!p.tags.every(t=>typeof t==='string'&&t.length<100)||!Array.isArray(p.files)||!Array.isArray(p.updates)||!safeURL(p.cover)||!safeURL(p.link||'')||!safeURL(p.originalLink||'')||!['Afgerond','Bezig','Nog te starten'].includes(p.status))return false;if(p.beforeImages!==undefined&&(!Array.isArray(p.beforeImages)||p.beforeImages.some(f=>!f||!safeURL(f.url)||!String(f.type||'').startsWith('image/')||!p.files.some(a=>a.url===f.url))))return false;if(p.firstVersionVideo&&(!safeURL(p.firstVersionVideo.url)||!String(p.firstVersionVideo.type||'').startsWith('video/')||!p.files.some(a=>a.url===p.firstVersionVideo.url)))return false;ids.add(p.id);for(const k of ['summary','subtitle','approach','result','reflection','team','duration','start','end','art'])if(typeof p[k]!=='string'||p[k].length>30000)return false;for(const f of p.files)if(!f||typeof f.id!=='string'||(!/^\/files\/[a-zA-Z0-9-]+$/.test(f.url)&&!isAssetPath(f.url))||typeof f.name!=='string'||typeof f.type!=='string')return false;for(const u of p.updates)if(!u||typeof u.date!=='string'||typeof u.title!=='string'||typeof u.text!=='string')return false;}
  const goals=new Set();for(const g of d.goals){if(!g||typeof g.id!=='string'||goals.has(g.id)||!Array.isArray(g.projects)||!g.projects.every(id=>ids.has(id)))return false;goals.add(g.id);for(const k of ['title','description','evidence','reflection'])if(typeof g[k]!=='string'||g[k].length>30000)return false;}
  return true;
 }
 async function readData(env){const obj=await env.BUCKET.get('portfolio/content.json');return obj?{data:applyMedia(applyFeedback(await obj.json())),etag:obj.etag}:{data:applyMedia(applyFeedback(structuredClone(initialData))),etag:'initial'};}
-const allowedTypes=new Set(['image/jpeg','image/png','image/webp','image/gif','application/pdf','text/plain','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.presentationml.presentation','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
+const allowedTypes=new Set(['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime','application/pdf','text/plain','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.presentationml.presentation','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
 export default {async fetch(req,env){try{
  const url=new URL(req.url);const path=url.pathname;const isAdmin=admin(req,env);
  if(isAssetPath(path)&&['GET','HEAD'].includes(req.method)){const key=path.slice(8).replace(/\.(jpg|pdf)$/,'');const asset=ASSETS[key];return new Response(req.method==='HEAD'?null:Uint8Array.from(atob(asset.data),c=>c.charCodeAt(0)),{headers:{...headers,'Content-Type':asset.type,'Cache-Control':'public, max-age=3600','Content-Disposition':(url.searchParams.has('download')?'attachment':'inline')+"; filename*=UTF-8''"+encodeURIComponent(asset.name||key+'.jpg')}});}
@@ -79,7 +79,7 @@ export default {async fetch(req,env){try{
   const size=Number(req.headers.get('content-length')||0);if(size>21*1024*1024)return json({error:'Maximaal 20 MB per bestand.'},413);
   const form=await req.formData();const file=form.get('file');if(!file||typeof file==='string')return json({error:'Kies een bestand.'},400);
   if(file.size>20*1024*1024)return json({error:'Maximaal 20 MB per bestand.'},413);
-  if(!allowedTypes.has(file.type))return json({error:'Kies een foto (JPG, PNG, WebP, GIF), pdf, tekstbestand of Office-document.'},400);
+  if(!allowedTypes.has(file.type))return json({error:'Kies een foto, video (MP4, WebM, MOV), pdf, tekstbestand of Office-document.'},400);
   const id=crypto.randomUUID();const name=file.name.replace(/[\r\n"\\/]/g,'_').slice(0,200);
   await env.BUCKET.put('files/'+id,await file.arrayBuffer(),{httpMetadata:{contentType:file.type},customMetadata:{name}});
   return json({id,name,url:'/files/'+id,type:file.type,size:file.size});
@@ -89,7 +89,7 @@ export default {async fetch(req,env){try{
  const {data}=await readData(env);const projects=isAdmin?data.projects:data.projects.filter(p=>p.published);const publicRef=projects.some(p=>p.files.some(f=>f.url===path)||p.cover===path)||data.about.photo===path;
  if(!publicRef&&!isAdmin)return new Response('Niet gevonden',{status:404});
  const obj=await env.BUCKET.get('files/'+id);if(!obj)return new Response('Niet gevonden',{status:404});
- const type=obj.httpMetadata?.contentType||'application/octet-stream';const preview=type.startsWith('image/')||type==='application/pdf';
+ const type=obj.httpMetadata?.contentType||'application/octet-stream';const preview=type.startsWith('image/')||type.startsWith('video/')||type==='application/pdf';
  return new Response(req.method==='HEAD'?null:obj.body,{headers:{...headers,'Content-Type':type,'Content-Disposition':(url.searchParams.has('download')||!preview?'attachment':'inline')+"; filename*=UTF-8''"+encodeURIComponent(obj.customMetadata?.name||'bestand'),'Cache-Control':'private, no-store','Content-Security-Policy':"sandbox; default-src 'none'"}});
  }
  if(path.startsWith('/api/'))return json({error:'Niet gevonden'},404);
