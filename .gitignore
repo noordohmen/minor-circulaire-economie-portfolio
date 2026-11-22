@@ -5,3 +5,6 @@ dist/
 !.env.example
 .dev-data/
 *.tar.gz
+
+media-import/
+.media-tools/
