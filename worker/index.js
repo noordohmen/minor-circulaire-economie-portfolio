@@ -47,6 +47,7 @@ const admin=(req,env)=>!!env.ADMIN_EMAIL && !!req.headers.get('oai-authenticated
 const safeURL=x=>typeof x==='string'&&(x===''||/^https:\/\/[^\s]+$/.test(x)||/^\/files\/[a-zA-Z0-9-]+$/.test(x)||isAssetPath(x));
 export function validData(d){
  if(!d||!Array.isArray(d.projects)||!Array.isArray(d.goals)||d.projects.length>100||d.goals.length>100||!d.about||typeof d.about.text!=='string'||!safeURL(d.about.photo)) return false;
+ if(d.about.gallery!==undefined&&(!Array.isArray(d.about.gallery)||d.about.gallery.length>100||d.about.gallery.some(f=>!f||!safeURL(f.url)||!String(f.type||'').startsWith('image/')||typeof f.caption!=='string'||f.caption.length>1000)))return false;
  const ids=new Set();
  for(const p of d.projects){if(!p||typeof p.id!=='string'||!/^[a-z0-9-]{1,80}$/.test(p.id)||ids.has(p.id)||typeof p.title!=='string'||!p.title.trim()||!Array.isArray(p.tags)||!p.tags.every(t=>typeof t==='string'&&t.length<100)||!Array.isArray(p.files)||!Array.isArray(p.updates)||!safeURL(p.cover)||!safeURL(p.link||'')||!safeURL(p.originalLink||'')||!['Afgerond','Bezig','Nog te starten'].includes(p.status))return false;if(p.beforeImages!==undefined&&(!Array.isArray(p.beforeImages)||p.beforeImages.some(f=>!f||!safeURL(f.url)||!String(f.type||'').startsWith('image/')||!p.files.some(a=>a.url===f.url))))return false;if(p.originalVideo&&(!safeURL(p.originalVideo.url)||!String(p.originalVideo.type||'').startsWith('video/')||!p.files.some(a=>a.url===p.originalVideo.url)))return false;if(p.firstVersionVideo&&(!safeURL(p.firstVersionVideo.url)||!String(p.firstVersionVideo.type||'').startsWith('video/')||!p.files.some(a=>a.url===p.firstVersionVideo.url)))return false;if(['startDate','endDate'].some(k=>p[k]&&!/^\d{4}-\d{2}-\d{2}$/.test(p[k])))return false;ids.add(p.id);for(const k of ['summary','subtitle','approach','result','reflection','team','duration','start','end','art'])if(typeof p[k]!=='string'||p[k].length>30000)return false;for(const f of p.files)if(!f||typeof f.id!=='string'||(!/^\/files\/[a-zA-Z0-9-]+$/.test(f.url)&&!isAssetPath(f.url))||typeof f.name!=='string'||typeof f.type!=='string')return false;for(const u of p.updates)if(!u||typeof u.date!=='string'||typeof u.title!=='string'||typeof u.text!=='string')return false;}
  const goals=new Set();for(const g of d.goals){if(!g||typeof g.id!=='string'||goals.has(g.id)||!Array.isArray(g.projects)||!g.projects.every(id=>ids.has(id)))return false;goals.add(g.id);for(const k of ['title','description','evidence','reflection'])if(typeof g[k]!=='string'||g[k].length>30000)return false;}
@@ -66,7 +67,14 @@ export function applyNovemberUpdates(data){
  const luck=data.projects.find(p=>p.id==='lots-of-luck');if(luck){luck.start='2026-11';luck.startDate='2026-11-19';luck.status='Bezig';luck.duration='Gestart op 19 november 2026';luck.summary='Op 19 november ben ik gestart met het vernieuwen van de Lots of Luck-website met AI. De oorspronkelijke website is vastgelegd met screenshots en een schermopname.';}
  data.novemberUpdatesRevision=1;return data;
 }
-async function readData(env){const obj=await env.BUCKET.get('portfolio/content.json');const imported=await env.BUCKET.get('portfolio/import.json');return {data:applyNovemberUpdates(applyImported(applyMedia(applyFeedback(obj?await obj.json():structuredClone(initialData))),imported?await imported.json():null)),etag:obj?obj.etag:'initial'};}
+export function applyAboutPhotos(data){
+ if(data.aboutPhotosRevision)return data;
+ data.about.photo='/assets/noor-portret.jpg';
+ data.about.gallery=data.about.gallery||[];
+ if(!data.about.gallery.some(f=>f.id==='noor-talis-5215'))data.about.gallery.unshift({id:'noor-talis-5215',url:'/assets/noor-talis-5215.jpg',type:'image/jpeg',name:'Project talis.jpg',caption:'Project talis'});
+ data.aboutPhotosRevision=1;return data;
+}
+async function readData(env){const obj=await env.BUCKET.get('portfolio/content.json');const imported=await env.BUCKET.get('portfolio/import.json');return {data:applyAboutPhotos(applyNovemberUpdates(applyImported(applyMedia(applyFeedback(obj?await obj.json():structuredClone(initialData))),imported?await imported.json():null))),etag:obj?obj.etag:'initial'};}
 
 const allowedTypes=new Set(['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime','application/pdf','text/plain','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.presentationml.presentation','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
 export default {async fetch(req,env){try{
@@ -102,7 +110,7 @@ export default {async fetch(req,env){try{
  }
  if(path.startsWith('/files/')&&['GET','HEAD'].includes(req.method)){
  const id=path.slice(7);if(!/^[a-zA-Z0-9-]+$/.test(id))return new Response('Niet gevonden',{status:404});
- const {data}=await readData(env);const projects=isAdmin?data.projects:data.projects.filter(p=>p.published);const publicRef=projects.some(p=>p.files.some(f=>f.url===path)||p.cover===path)||data.about.photo===path;
+ const {data}=await readData(env);const projects=isAdmin?data.projects:data.projects.filter(p=>p.published);const publicRef=projects.some(p=>p.files.some(f=>f.url===path)||p.cover===path)||data.about.photo===path||(data.about.gallery||[]).some(f=>f.url===path);
  if(!publicRef&&!isAdmin)return new Response('Niet gevonden',{status:404});
  let obj=await env.BUCKET.get('files/'+id);if(!obj)return new Response('Niet gevonden',{status:404});
  const type=obj.httpMetadata?.contentType||'application/octet-stream';const preview=type.startsWith('image/')||type.startsWith('video/')||type==='application/pdf';

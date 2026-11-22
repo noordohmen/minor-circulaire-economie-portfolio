@@ -21,3 +21,15 @@
 /* Full-height opening on laptops; the timeline begins below the fold. */
 @media(min-width:801px){.hero{min-height:calc(100svh - var(--header-height,110px));display:flex;flex-direction:column;justify-content:center;padding-top:55px;padding-bottom:55px}.hero h1{font-size:clamp(70px,min(11.8vw,21svh),180px)}.hero-bottom{margin-top:45px}}
 .timeline-item .art-ocean img{transform:scale(1.25);transform-origin:50% 12%}.timeline-item .art-ocean:hover img{transform:scale(1.30)}
+
+/* Personal photos retain their original content and have rounded corners. */
+.closing h2{font-size:clamp(26px,3vw,40px)}
+.portrait.has-photo{padding:0;overflow:hidden;background:transparent;display:block;aspect-ratio:2/3}
+.portrait img{display:block;width:100%;height:100%;border-radius:24px;object-fit:cover}
+.project-art img,.gallery img,.cards-preview img{border-radius:18px}
+.about-photos{margin-top:60px}.about-photos h2{font-size:34px;letter-spacing:-.04em;margin-bottom:26px}
+.about-photo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px;align-items:start}
+.about-photo-grid figure{margin:0;min-width:0}.about-photo-grid a{display:block;border-radius:24px;overflow:hidden}
+.about-photo-grid img{display:block;width:100%;height:auto;border-radius:24px}.about-photo-grid figcaption{margin-top:12px;font-size:16px;color:var(--muted)}
+.about-gallery-editor{padding:20px 0;border-bottom:1px solid var(--line)}.about-gallery-editor img{display:block;width:160px;max-height:200px;object-fit:cover;border-radius:18px;margin-bottom:15px}
+@media(max-width:600px){.about-photo-grid{grid-template-columns:1fr;gap:24px}.portrait.has-photo{max-width:100%}}
