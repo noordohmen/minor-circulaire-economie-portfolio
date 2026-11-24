@@ -74,7 +74,14 @@ export function applyAboutPhotos(data){
  if(!data.about.gallery.some(f=>f.id==='noor-talis-5215'))data.about.gallery.unshift({id:'noor-talis-5215',url:'/assets/noor-talis-5215.jpg',type:'image/jpeg',name:'Project talis.jpg',caption:'Project talis'});
  data.aboutPhotosRevision=1;return data;
 }
-async function readData(env){const obj=await env.BUCKET.get('portfolio/content.json');const imported=await env.BUCKET.get('portfolio/import.json');return {data:applyAboutPhotos(applyNovemberUpdates(applyImported(applyMedia(applyFeedback(obj?await obj.json():structuredClone(initialData))),imported?await imported.json():null))),etag:obj?obj.etag:'initial'};}
+export function applyIpega(data){
+ if(data.ipegaRevision)return data;
+ let p=data.projects.find(p=>p.id==='ipega-projectweek'||/ipega/i.test(p.title));
+ if(!p){p={id:'ipega-projectweek',title:'IPEGA – projectweek',subtitle:'Een projectweek samen met Luna, Tein en Jibbe.',start:'2026-11',end:'2026-11',startDate:'2026-11-23',endDate:'2026-11-27',tags:['Projectweek'],status:'Bezig',art:'hub',summary:'Van maandag 23 tot en met vrijdag 27 november werk ik aan de IPEGA-projectweek, samen met Luna, Tein en Jibbe.',approach:'',result:'',reflection:'',team:'Luna, Tein en Jibbe',duration:'1 projectweek · maandag t/m vrijdag',link:'',cover:'',files:[],updates:[],published:true};const i=data.projects.findIndex(p=>p.id==='innovatiehub');data.projects.splice(i<0?data.projects.length:i,0,p);}
+ else{p.start='2026-11';p.end='2026-11';p.startDate='2026-11-23';p.endDate='2026-11-27';p.team='Luna, Tein en Jibbe';p.status='Bezig';p.published=true;}
+ data.ipegaRevision=1;return data;
+}
+async function readData(env){const obj=await env.BUCKET.get('portfolio/content.json');const imported=await env.BUCKET.get('portfolio/import.json');return {data:applyIpega(applyAboutPhotos(applyNovemberUpdates(applyImported(applyMedia(applyFeedback(obj?await obj.json():structuredClone(initialData))),imported?await imported.json():null)))),etag:obj?obj.etag:'initial'};}
 
 const allowedTypes=new Set(['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime','application/pdf','text/plain','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.presentationml.presentation','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
 export default {async fetch(req,env){try{
@@ -88,16 +95,16 @@ export default {async fetch(req,env){try{
   if(req.headers.get('origin')!==url.origin)return json({error:'Ongeldige aanvraag.'},403);
  }
  if(path==='/api/content'&&req.method==='GET'){
- const {data,etag}=await readData(env);if(!isAdmin){data.projects=data.projects.filter(p=>p.published);const ids=new Set(data.projects.map(p=>p.id));data.goals=data.goals.map(g=>({...g,projects:g.projects.filter(id=>ids.has(id))}));}return json(data,200,{ETag:'"'+etag+'"'});
+ const {data,etag}=await readData(env);if(!isAdmin){data.projects=data.projects.filter(p=>p.published);const ids=new Set(data.projects.map(p=>p.id));data.goals=data.goals.map(g=>({...g,projects:g.projects.filter(id=>ids.has(id))}));}return json(data,200,{ETag:'"'+etag+'"','X-Portfolio-Revision':etag});
  }
  if(path==='/api/content'&&req.method==='PUT'){
   if(Number(req.headers.get('content-length')||0)>2000000)return json({error:'Te veel tekst. Verklein de inhoud.'},413);
   const body=await req.text();if(body.length>2000000)return json({error:'Te veel tekst.'},413);let data;try{data=JSON.parse(body);}catch{return json({error:'Ongeldige inhoud.'},400);}
   if(!validData(data))return json({error:'Controleer de projectvelden en links. Alleen https-links zijn toegestaan.'},400);
-  const expected=req.headers.get('if-match')?.replaceAll('"','');if(!expected)return json({error:'Herlaad de pagina voordat je opslaat.'},409);
+  const expected=req.headers.get('if-match')?.trim().replace(/^W\//i,'').replaceAll('"','');if(!expected)return json({error:'Herlaad de pagina voordat je opslaat.'},409);
   const opts={httpMetadata:{contentType:'application/json'},onlyIf:expected==='initial'?{etagDoesNotMatch:'*'}:{etagMatches:expected}};
   const saved=await env.BUCKET.put('portfolio/content.json',body,opts);if(!saved)return json({error:'Er is in een ander venster iets gewijzigd. Herlaad deze pagina.'},409);
-  return json({ok:true},200,{ETag:'"'+saved.etag+'"'});
+  return json({ok:true},200,{ETag:'"'+saved.etag+'"','X-Portfolio-Revision':saved.etag});
  }
  if(path==='/api/upload'&&req.method==='POST'){
   const size=Number(req.headers.get('content-length')||0);if(size>21*1024*1024)return json({error:'Maximaal 20 MB per bestand.'},413);
