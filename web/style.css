@@ -118,7 +118,7 @@ footer{background:var(--paper);border-top-color:#dfe3da}
 .showcase-card:focus-visible{outline:3px solid var(--olive);outline-offset:6px}
 @media(min-width:901px) and (prefers-reduced-motion:no-preference){
  .motion-ready .hero-stage+.showcase-stage{margin-top:-38svh}
- .motion-ready .showcase-stage{height:160svh;padding:0 5%;overflow:clip}
+ .motion-ready .showcase-stage{height:120svh;padding:0 5%;overflow:clip}
  .motion-ready .showcase-sticky{position:sticky;top:var(--header-height,90px);height:calc(100svh - var(--header-height,90px));display:flex;flex-direction:column;justify-content:center}
  .motion-ready .showcase-label{margin-bottom:40px;transform:translateY(calc((1 - var(--spread,0))*18px))}
  .motion-ready .showcase-images{perspective:1400px;width:100%;max-width:1200px;margin:0 auto}
